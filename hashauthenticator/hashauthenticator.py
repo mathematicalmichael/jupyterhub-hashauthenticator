@@ -31,12 +31,12 @@ class HashAuthenticator(Authenticator):
   def authenticate(self, handler, data):
     username = data['username']
     password = data['password']
-    logging.info("password was {}".format(password))
-    logging.info("secret key is {}".format(self.secret_key))
+    logging.error("password was {}".format(password))
+    logging.error("secret key is {}".format(self.secret_key))
 
     password_digest = generate_password_digest(username, self.secret_key)
     expected_password = password_digest[:self.password_length]
-    logging.info("expected password was {}".format(expected_password))
+    logging.error("expected password was {}".format(expected_password))
 
     if password == expected_password:
       return username
