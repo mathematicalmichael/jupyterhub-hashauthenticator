@@ -1,6 +1,6 @@
 # Hash JupyterHub Authenticator
 
-An authenticator for [JupyterHub](https://jupyterhub.readthedocs.io/en/latest/) where the password for each user is a secure hash of its username. Useful for environments where it's not suitable for users to authenticate with their Google/GitHub/etc. acconunts.
+An authenticator for [JupyterHub](https://jupyterhub.readthedocs.io/en/latest/) where the password for each user is a secure hash of its username. Useful for environments where it's not suitable for users to authenticate with their Google/GitHub/etc. accounts.
 
 ## Installation
 
@@ -10,11 +10,12 @@ pip install jupyterhub-hashauthenticator
 
 Should install it. It has no additional dependencies beyond JupyterHub.
 
-You can then use this as your authenticator by adding the following line to your jupyterhub_config.py:
+You can then use this as your authenticator by adding the following lines to your `jupyterhub_config.py`:
 
 ```python
 c.JupyterHub.authenticator_class = 'hashauthenticator.HashAuthenticator
-c.HashAuthenticator.secret_key = 'my secret key'
+c.HashAuthenticator.secret_key = 'my secret key'  # Defaults to ''
+c.HashAuthenticator.password_length = 10          # Defaults to 6
 ```
 
 You can generate a good secret key with:
@@ -25,12 +26,32 @@ $ openssl rand -hex 32
 
 ## Generating the password
 
-This package comes with a command called `hashauthenticator`. Example usage:
+This package comes with a command called `hashauthpw`. Example usage:
 
 ```bash
-$ hashauthenticator
+$ hashauthpw
 Usage: hashauthenticator user [secret_key [len]]
 
-$ hashauthenticator my_key pminkov
+$ hashauthpw pminkov my_key
 939fd4
+```
+
+## JupyterHub service
+
+This package also provides a JupyterHub service which gives administrators a CSV containing all users and their passwords.  This can be used to generate login information for a group of users or to remind a user of their password.  In addition to JupyterHub, this service requires the *flask* and *requests* packages.
+
+It can be enabled through your `jupyterhub_config.py` file:
+
+```python
+c.JupyterHub.services = [
+  {
+    'name': 'hashauth',  # Service will be available at /services/hashauth
+    'admin': True,
+    'url': 'http://127.0.0.1:10101',          # The ports in this URL and
+    'command': ['hashauthservice', '10101'],  # command line must match
+    'environment': {
+      'CONFIG_FILE': 'jupyterhub_config.py'   # Path to this configuration file
+    }
+  }
+]
 ```
