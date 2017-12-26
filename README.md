@@ -29,7 +29,7 @@ This package comes with a command called `hashauthenticator`. Example usage:
 
 ```bash
 $ hashauthenticator
-Usage: hashauthenticator secret_key user [len]
+Usage: hashauthenticator user [secret_key [len]]
 
 $ hashauthenticator my_key pminkov
 939fd4

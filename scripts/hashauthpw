@@ -4,12 +4,12 @@ import sys
 from hashauthenticator import generate_password_digest
 
 if __name__ == '__main__':
-  if len(sys.argv) not in [3,4]:
-    print('Usage: hashauthenticator secret_key user [len]')
+  if len(sys.argv) not in [2,3,4]:
+    print('Usage: hashauthenticator user [secret_key [len]]')
     sys.exit(1)
 
-  secret_key = sys.argv[1]
-  username = sys.argv[2]
+  username = sys.argv[1]
+  secret_key = sys.argv[2] if len(sys.argv) > 2 else ''
   length = int(sys.argv[3]) if len(sys.argv) > 3 else 6
 
   password = generate_password_digest(username, secret_key, length)
