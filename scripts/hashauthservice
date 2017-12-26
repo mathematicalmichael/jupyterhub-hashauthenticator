@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import csv
 from functools import wraps
 from io import StringIO
@@ -11,7 +13,7 @@ from traitlets.config import PyFileConfigLoader
 
 from jupyterhub.services.auth import HubAuth
 
-from passwordhash import generate_password_digest
+from hashauthenticator import generate_password_digest
 
 prefix = os.environ.get('JUPYTERHUB_SERVICE_PREFIX', '/')
 api_token = os.environ['JUPYTERHUB_API_TOKEN']
