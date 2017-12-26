@@ -1,7 +1,7 @@
 from jupyterhub.auth import Authenticator
 from tornado import gen
 from traitlets import Unicode, Integer
-from passwordhash import generate_password_digest
+from .passwordhash import generate_password_digest
 
 class HashAuthenticator(Authenticator):
   secret_key = Unicode(
