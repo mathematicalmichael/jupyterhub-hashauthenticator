@@ -1,0 +1,72 @@
+import csv
+from functools import wraps
+from io import StringIO
+import os
+import sys
+from urllib.parse import quote
+
+from flask import Flask, redirect, request, Response
+import requests
+from traitlets.config import PyFileConfigLoader
+
+from jupyterhub.services.auth import HubAuth
+
+from passwordhash import generate_password_digest
+
+prefix = os.environ.get('JUPYTERHUB_SERVICE_PREFIX', '/')
+api_token = os.environ['JUPYTERHUB_API_TOKEN']
+config_file = os.environ.get('CONFIG_FILE', 'jupyterhub_config.py')
+
+
+def generate_password_function():
+  config = PyFileConfigLoader(config_file).load_config()
+  hash_config = config.get('HashAuthenticator', dict())
+  secret_key = hash_config.get('secret_key', '')
+  password_length = hash_config.get('password_length', 6)
+  return lambda user: generate_password_digest(user, secret_key, password_length)
+
+get_password = generate_password_function()
+
+
+auth = HubAuth(api_token=api_token, cookie_cache_max_age=60)
+
+def authenticated_admin(f):
+  """Decorator for authenticating with the Hub"""
+  @wraps(f)
+  def decorated(*args, **kwargs):
+    cookie = request.cookies.get(auth.cookie_name)
+    if cookie:
+      user = auth.user_for_cookie(cookie)
+    else:
+      user = None
+    if user:
+      if user['admin']:
+        return f(user, *args, **kwargs)
+      else:
+        return "Unauthorized", 403
+    else:
+      # redirect to login url on failed auth
+      return redirect(auth.login_url + '?next=%s' % quote(request.path))
+  return decorated
+
+
+app = Flask(__name__)
+
+@app.route(prefix + '/')
+@authenticated_admin
+def hash(user):
+  resp = requests.get('http://localhost:8081/hub/api/users',
+                      headers={'Authorization': 'token {}'.format(api_token)})
+  users = sorted((u['name'], get_password(u['name'])) for u in resp.json())
+  buffer_ = StringIO()
+  csv.writer(buffer_).writerows(users)
+  return Response(buffer_.getvalue(), mimetype="text/plain")
+
+
+if __name__ == '__main__':
+  if len(sys.argv) != 2:
+    print("Usage: {} port".format(sys.argv[0]))
+    sys.exit(1)
+
+  port = sys.argv[1]
+  app.run(port=port)
