@@ -5,7 +5,7 @@ from functools import wraps
 from io import StringIO
 import os
 import sys
-from urllib.parse import quote
+from urllib.parse import quote, urlparse
 
 from flask import Flask, redirect, request, Response
 import requests
@@ -15,6 +15,7 @@ from jupyterhub.services.auth import HubAuth
 
 from hashauthenticator import generate_password_digest
 
+service_url = urlparse(os.environ['JUPYTERHUB_SERVICE_URL'])
 prefix = os.environ.get('JUPYTERHUB_SERVICE_PREFIX', '/')
 api_token = os.environ['JUPYTERHUB_API_TOKEN']
 config_file = os.environ.get('CONFIG_FILE', 'jupyterhub_config.py')
@@ -66,9 +67,4 @@ def hash(user):
 
 
 if __name__ == '__main__':
-  if len(sys.argv) != 2:
-    print("Usage: {} port".format(sys.argv[0]))
-    sys.exit(1)
-
-  port = sys.argv[1]
-  app.run(port=port)
+  app.run(port=service_url.port)
