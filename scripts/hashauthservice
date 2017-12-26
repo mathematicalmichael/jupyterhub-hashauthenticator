@@ -2,16 +2,18 @@
 
 import csv
 from functools import wraps
-from io import StringIO
 import os
-import sys
-from urllib.parse import quote, urlparse
+from urllib.parse import urlparse
 
-from flask import Flask, redirect, request, Response
 import requests
 from traitlets.config import PyFileConfigLoader
 
-from jupyterhub.services.auth import HubAuth
+from tornado.ioloop import IOLoop
+from tornado.httpserver import HTTPServer
+from tornado.web import RequestHandler, Application, authenticated, HTTPError
+
+from jupyterhub.services.auth import HubOAuthenticated, HubOAuthCallbackHandler
+from jupyterhub.utils import url_path_join
 
 from hashauthenticator import generate_password_digest
 
@@ -31,40 +33,29 @@ def generate_password_function():
 get_password = generate_password_function()
 
 
-auth = HubAuth(api_token=api_token, cookie_cache_max_age=60)
+class HashAuthHandler(HubOAuthenticated, RequestHandler):
 
-def authenticated_admin(f):
-  """Decorator for authenticating with the Hub"""
-  @wraps(f)
-  def decorated(*args, **kwargs):
-    cookie = request.cookies.get(auth.cookie_name)
-    if cookie:
-      user = auth.user_for_cookie(cookie)
-    else:
-      user = None
-    if user:
-      if user['admin']:
-        return f(user, *args, **kwargs)
-      else:
-        return "Unauthorized", 403
-    else:
-      # redirect to login url on failed auth
-      return redirect(auth.login_url + '?next=%s' % quote(request.path))
-  return decorated
+  @authenticated
+  def get(self):
+    if not self.get_current_user()['admin']:
+      raise HTTPError(403)
+
+    resp = requests.get('http://localhost:8081/hub/api/users',
+                        headers={'Authorization': 'token {}'.format(api_token)})
+    users = sorted((u['name'], get_password(u['name'])) for u in resp.json())
+    self.set_header('content-type', 'text/plain')
+    csv.writer(self).writerows(users)
 
 
-app = Flask(__name__)
+def main():
+  app = Application([
+    (prefix, HashAuthHandler),
+    (url_path_join(prefix, 'oauth_callback'), HubOAuthCallbackHandler)
+  ], cookie_secret=os.urandom(32))
 
-@app.route(prefix + '/')
-@authenticated_admin
-def hash(user):
-  resp = requests.get('http://localhost:8081/hub/api/users',
-                      headers={'Authorization': 'token {}'.format(api_token)})
-  users = sorted((u['name'], get_password(u['name'])) for u in resp.json())
-  buffer_ = StringIO()
-  csv.writer(buffer_).writerows(users)
-  return Response(buffer_.getvalue(), mimetype="text/plain")
+  HTTPServer(app).listen(service_url.port, service_url.hostname)
+  IOLoop.current().start()
 
 
 if __name__ == '__main__':
-  app.run(port=service_url.port)
+  main()

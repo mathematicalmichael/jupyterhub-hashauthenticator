@@ -38,7 +38,7 @@ $ hashauthpw pminkov my_key
 
 ## JupyterHub service
 
-This package also provides a JupyterHub service which gives administrators a CSV containing all users and their passwords.  This can be used to generate login information for a group of users or to remind a user of their password.  In addition to JupyterHub, this service requires the *flask* and *requests* packages.
+This package also provides a JupyterHub service which gives administrators a CSV containing all users and their passwords.  This can be used to generate login information for a group of users or to remind a user of their password.  In addition to JupyterHub, this service requires the *requests* package.
 
 It can be enabled through your `jupyterhub_config.py` file:
 
