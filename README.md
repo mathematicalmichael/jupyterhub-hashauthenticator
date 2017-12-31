@@ -30,7 +30,7 @@ This package comes with a command called `hashauthpw`. Example usage:
 
 ```bash
 $ hashauthpw
-Usage: hashauthenticator user [secret_key [len]]
+usage: hashauthpw [-h] [--length LENGTH] username [secret_key]
 
 $ hashauthpw pminkov my_key
 939fd4
