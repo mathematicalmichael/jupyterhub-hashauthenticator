@@ -48,10 +48,7 @@ c.JupyterHub.services = [
     'name': 'hashauth',  # Service will be available at /services/hashauth
     'admin': True,
     'url': 'http://127.0.0.1:10101',  # Pick any free port
-    'command': ['hashauthservice'],
-    'environment': {
-      'CONFIG_FILE': 'jupyterhub_config.py'  # Path to this configuration file
-    }
-  }
+    'command': ['hashauthservice', 'jupyterhub-config.py'],  # Second arg is path
+  }                                                          # to this file
 ]
 ```
