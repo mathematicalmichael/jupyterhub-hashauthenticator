@@ -1,10 +1,12 @@
 import csv
 
 from jupyterhub import orm
-from jupyterhub.auth import Authenticator
 from jupyterhub.handlers import BaseHandler
 from jupyterhub.utils import admin_only
+from oauthenticator.google import GoogleOAuthenticator
 from tornado import gen
+from tornado.httputil import url_concat
+from tornado.web import Finish
 from traitlets import Unicode, Integer, Bool
 
 from .passwordhash import generate_password_digest
@@ -22,7 +24,7 @@ class PasswordHandler(BaseHandler):
     csv.writer(self).writerows(users)
 
 
-class HashAuthenticator(Authenticator):
+class HashAuthenticator(GoogleOAuthenticator):
   secret_key = Unicode(
     config=True,
     help="Key used to encrypt usernames to produce passwords."
@@ -44,8 +46,19 @@ class HashAuthenticator(Authenticator):
 
   @gen.coroutine
   def authenticate(self, handler, data):
+    if not data:
+      retval = yield super().authenticate(handler, data)
+      retval['name'] += '@'
+      retval['admin'] = True
+      return retval
+
     username = data['username']
     password = data['password']
+
+    if username.endswith('@'):
+      handler.redirect(url_concat(self.login_url(handler.hub.base_url),
+                                  {'next': handler.get_argument('next', '')}))
+      raise Finish
 
     if password == self.get_password(username):
       return username
@@ -53,6 +66,8 @@ class HashAuthenticator(Authenticator):
     return None
 
   def get_handlers(self, app):
+    extra_handers = []
     if self.show_logins:
-      return [('/login_list', PasswordHandler, {'get_password': self.get_password})]
-    return []
+      extra_handers = [('/login_list', PasswordHandler, {'get_password': self.get_password})]
+
+    return super().get_handlers(app) + extra_handers
