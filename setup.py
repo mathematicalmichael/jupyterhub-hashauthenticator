@@ -9,7 +9,7 @@ setup(
     author_email='pminkov@gmail.com',
     maintainer='Robert Schroll',
     maintainer_email='robert@thedataincubator.com',
-    scripts=['scripts/hashauthpw', 'scripts/hashauthservice'],
+    scripts=['scripts/hashauthpw'],
     install_requires=['jupyterhub', 'tornado', 'traitlets'],
     test_suite="hashauthenticator.tests",
     license='BSD3',

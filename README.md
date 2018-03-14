@@ -38,20 +38,3 @@ usage: hashauthpw [-h] [--length LENGTH] username [secret_key]
 $ hashauthpw pminkov my_key
 939fd4
 ```
-
-## JupyterHub service
-
-This package also provides a JupyterHub service which gives administrators a CSV containing all users and their passwords.  This can be used to generate login information for a group of users or to remind a user of their password.  In addition to JupyterHub, this service requires the *requests* package.
-
-It can be enabled through your `jupyterhub_config.py` file:
-
-```python
-c.JupyterHub.services = [
-  {
-    'name': 'hashauth',  # Service will be available at /services/hashauth
-    'admin': True,
-    'url': 'http://127.0.0.1:10101',  # Pick any free port
-    'command': ['hashauthservice', 'jupyterhub-config.py'],  # Second arg is path
-  }                                                          # to this file
-]
-```
