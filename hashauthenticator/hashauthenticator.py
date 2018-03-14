@@ -15,9 +15,6 @@ class PasswordHandler(BaseHandler):
   def initialize(self, get_password):
     self.get_password = get_password
 
-  def get_password(self, user):
-    return generate_password_digest(user, self.secret_key, self.password_length)
-
   @admin_only
   def get(self):
     users = sorted((u.name, self.get_password(u.name)) for u in self.db.query(orm.User))
