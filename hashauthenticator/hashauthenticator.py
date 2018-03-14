@@ -15,12 +15,15 @@ from .passwordhash import generate_password_digest
 
 class PasswordHandler(BaseHandler):
 
-  def initialize(self, get_password):
+  def initialize(self, get_password, admin_suffix):
     self.get_password = get_password
+    self.admin_suffix = admin_suffix
 
   @admin_only
   def get(self):
-    users = sorted((u.name, self.get_password(u.name)) for u in self.db.query(orm.User))
+    users = sorted((u.name, self.get_password(u.name))
+                   for u in self.db.query(orm.User)
+                   if not (self.admin_suffix and u.name.endswith(self.admin_suffix)))
     self.set_header('content-type', 'text/plain')
     csv.writer(self).writerows(users)
 
@@ -91,7 +94,9 @@ def make_hash_authenticator(class_name, AdminAuthenticator=None):
     def get_handlers(self, app):
       extra_handers = []
       if self.show_logins:
-        extra_handers = [('/login_list', PasswordHandler, {'get_password': self.get_password})]
+        extra_handers = [('/login_list', PasswordHandler,
+                         {'get_password': self.get_password,
+                          'admin_suffix': self.admin_suffix if admin_auth else None})]
 
       return super().get_handlers(app) + extra_handers
 
