@@ -8,7 +8,7 @@ from oauthenticator.google import GoogleOAuthenticator
 from tornado import gen
 from tornado.httputil import url_concat
 from tornado.web import Finish, HTTPError
-from traitlets import Unicode, Integer, Bool
+from traitlets import Unicode, Integer, Bool, default
 
 from .passwordhash import generate_password_digest
 
@@ -54,6 +54,11 @@ def make_hash_authenticator(class_name, AdminAuthenticator=None):
       config=True,
       help="A suffix to separate users logged in through the admin authenticator."
     )
+
+    @default('login_service')
+    def default_login_service(self):
+      # Show the username/password entry
+      return ''
 
     def get_password(self, username):
       return generate_password_digest(username, self.secret_key, self.password_length)
