@@ -1,12 +1,13 @@
 import csv
 
 from jupyterhub import orm
+from jupyterhub.auth import Authenticator
 from jupyterhub.handlers import BaseHandler
 from jupyterhub.utils import admin_only
 from oauthenticator.google import GoogleOAuthenticator
 from tornado import gen
 from tornado.httputil import url_concat
-from tornado.web import Finish
+from tornado.web import Finish, HTTPError
 from traitlets import Unicode, Integer, Bool
 
 from .passwordhash import generate_password_digest
@@ -24,50 +25,74 @@ class PasswordHandler(BaseHandler):
     csv.writer(self).writerows(users)
 
 
-class HashAuthenticator(GoogleOAuthenticator):
-  secret_key = Unicode(
-    config=True,
-    help="Key used to encrypt usernames to produce passwords."
-  )
+def make_hash_authenticator(class_name, AdminAuthenticator=None):
+  admin_auth = True
+  if not AdminAuthenticator:
+    AdminAuthenticator = Authenticator
+    admin_auth = False
 
-  password_length = Integer(
-    default_value=6,
-    config=True,
-    help="Password length.")
+  class NewAuthenticator(AdminAuthenticator):
+    secret_key = Unicode(
+      config=True,
+      help="Key used to encrypt usernames to produce passwords."
+    )
 
-  show_logins = Bool(
-    default_value=False,
-    config=True,
-    help="Display login information to admins at /hub/login_list."
-  )
+    password_length = Integer(
+      default_value=6,
+      config=True,
+      help="Password length."
+    )
 
-  def get_password(self, username):
-    return generate_password_digest(username, self.secret_key, self.password_length)
+    show_logins = Bool(
+      default_value=False,
+      config=True,
+      help="Display login information to admins at /hub/login_list."
+    )
 
-  @gen.coroutine
-  def authenticate(self, handler, data):
-    if not data:
-      retval = yield super().authenticate(handler, data)
-      retval['name'] += '@'
-      retval['admin'] = True
-      return retval
+    admin_suffix = Unicode(
+      default_value='@',
+      config=True,
+      help="A suffix to separate users logged in through the admin authenticator."
+    )
 
-    username = data['username']
-    password = data['password']
+    def get_password(self, username):
+      return generate_password_digest(username, self.secret_key, self.password_length)
 
-    if username.endswith('@'):
-      handler.redirect(url_concat(self.login_url(handler.hub.base_url),
-                                  {'next': handler.get_argument('next', '')}))
-      raise Finish
+    @gen.coroutine
+    def authenticate(self, handler, data):
+      if not data:
+        if not admin_auth:
+          # We should never be in this state
+          raise HTTPError(503, "Incorrect authentication")
 
-    if password == self.get_password(username):
-      return username
+        retval = yield super().authenticate(handler, data)
+        retval['name'] += self.admin_suffix
+        retval['admin'] = True
+        return retval
 
-    return None
+      username = data['username']
+      password = data['password']
 
-  def get_handlers(self, app):
-    extra_handers = []
-    if self.show_logins:
-      extra_handers = [('/login_list', PasswordHandler, {'get_password': self.get_password})]
+      if admin_auth and username.endswith(self.admin_suffix):
+        handler.redirect(url_concat(self.login_url(handler.hub.base_url),
+                                    {'next': handler.get_argument('next', '')}))
+        raise Finish
 
-    return super().get_handlers(app) + extra_handers
+      if password == self.get_password(username):
+        return username
+
+      return None
+
+    def get_handlers(self, app):
+      extra_handers = []
+      if self.show_logins:
+        extra_handers = [('/login_list', PasswordHandler, {'get_password': self.get_password})]
+
+      return super().get_handlers(app) + extra_handers
+
+  NewAuthenticator.__name__ = class_name
+  return NewAuthenticator
+
+
+HashAuthenticator = make_hash_authenticator('HashAuthenticator')
+GoogleHashAuthenticator = make_hash_authenticator('GoogleHashAuthenticator', GoogleOAuthenticator)
