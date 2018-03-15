@@ -10,7 +10,7 @@ setup(
     maintainer='Robert Schroll',
     maintainer_email='robert@thedataincubator.com',
     scripts=['scripts/hashauthpw'],
-    install_requires=['jupyterhub', 'tornado', 'traitlets'],
+    install_requires=['jupyterhub', 'tornado', 'traitlets', 'oauthenticator'],
     test_suite="hashauthenticator.tests",
     license='BSD3',
     packages=['hashauthenticator'],
