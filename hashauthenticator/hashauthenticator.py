@@ -74,6 +74,11 @@ def make_hash_authenticator(class_name, AdminAuthenticator=None):
           raise HTTPError(503, "Incorrect authentication")
 
         retval = yield super().authenticate(handler, data)
+        if retval is None:
+          return None
+        if isinstance(retval, str):
+          retval = {'name': retval}
+
         retval['name'] += self.admin_suffix
         retval['admin'] = True
         if self.whitelist:
