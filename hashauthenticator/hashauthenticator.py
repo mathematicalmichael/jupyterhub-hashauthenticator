@@ -76,6 +76,8 @@ def make_hash_authenticator(class_name, AdminAuthenticator=None):
         retval = yield super().authenticate(handler, data)
         retval['name'] += self.admin_suffix
         retval['admin'] = True
+        if self.whitelist:
+          self.whitelist.add(retval['name'])
         return retval
 
       username = data['username']
